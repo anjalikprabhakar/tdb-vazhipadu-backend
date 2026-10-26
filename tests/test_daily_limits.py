@@ -193,7 +193,7 @@ async def test_limit_counts_bookings_made_before_limit_was_set(
     assert rejected.json()["error"]["details"][0]["remaining"] == 1
 
 
-@pytest.mark.parametrize("daily_limit", [0, -1, 10_001, "abc", 1.5])
+@pytest.mark.parametrize("daily_limit", [0, -1, 10_001, "abc", 1.5, True, False, "5", 5.0])
 async def test_validation_error_when_daily_limit_invalid(
     client: AsyncClient, temple_id: int, daily_limit: Any
 ) -> None:

@@ -14,7 +14,7 @@ def _to_paisa(value: Decimal) -> Decimal:
 
 Price = Annotated[Decimal, Field(gt=0, max_digits=10, decimal_places=2), AfterValidator(_to_paisa)]
 OfferingName = Annotated[str, Field(min_length=1, max_length=100)]
-DailyLimit = Annotated[int, Field(ge=1, le=MAX_DAILY_LIMIT)]
+DailyLimit = Annotated[int, Field(strict=True, ge=1, le=MAX_DAILY_LIMIT)]
 
 
 class OfferingCreate(BaseModel):
