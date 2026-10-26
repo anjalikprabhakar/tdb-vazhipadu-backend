@@ -2,15 +2,18 @@ import sqlite3
 from collections.abc import Iterator
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import pytest
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import Select
 from sqlalchemy.dialects import sqlite
 
 from assessment.enums import OrderStatus
 from assessment.pagination import encode_cursor
 from assessment.schemas.order import OrderSearch
+from assessment.services.collections import build_collection_query
 from assessment.services.orders import build_order_search
 
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
@@ -30,8 +33,8 @@ def migrated_db(tmp_path: Path) -> Iterator[Path]:
     yield database
 
 
-def query_plan(database: Path, search: OrderSearch) -> list[str]:
-    compiled = build_order_search(1, search).compile(dialect=sqlite.dialect())
+def query_plan(database: Path, query: Select[*tuple[Any, ...]]) -> list[str]:
+    compiled = query.compile(dialect=sqlite.dialect())
     params = [compiled.params[name] for name in compiled.positiontup or []]
     with sqlite3.connect(database) as connection:
         rows = connection.execute(f"EXPLAIN QUERY PLAN {compiled}", params).fetchall()
@@ -69,13 +72,20 @@ def test_schema_matches_models_when_migrated_from_empty(tmp_path: Path) -> None:
 def test_order_search_uses_index_without_sorting_when_planned(
     migrated_db: Path, search: OrderSearch, index: str | None
 ) -> None:
-    plan = query_plan(migrated_db, search)
+    plan = query_plan(migrated_db, build_order_search(1, search))
 
     assert any(line.startswith("SEARCH orders USING INDEX ix_orders_temple_") for line in plan)
     if index is not None:
         assert any(f"USING INDEX {index} " in line for line in plan)
     assert not any(line.startswith("SCAN orders") for line in plan)
     assert not any("TEMP B-TREE" in line for line in plan)
+
+
+def test_collection_report_uses_created_at_index_when_planned(migrated_db: Path) -> None:
+    plan = query_plan(migrated_db, build_collection_query(1, date(2026, 10, 26)))
+
+    assert any("SEARCH orders USING INDEX ix_orders_temple_created_at" in line for line in plan)
+    assert not any(line.startswith("SCAN orders") for line in plan)
 
 
 def test_daily_usage_backfilled_from_existing_orders_when_migrated(tmp_path: Path) -> None:

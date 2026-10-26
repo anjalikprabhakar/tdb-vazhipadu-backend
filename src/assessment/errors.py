@@ -32,6 +32,12 @@ class ConflictError(AppError):
     status_code = HTTPStatus.CONFLICT
     code = "conflict"
 
+    def __init__(
+        self, message: str, details: list[dict[str, Any]] | None = None, *, code: str = "conflict"
+    ) -> None:
+        super().__init__(message, details)
+        self.code = code
+
 
 class DailyLimitExceededError(AppError):
     status_code = HTTPStatus.CONFLICT
