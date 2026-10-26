@@ -3,6 +3,7 @@ from enum import StrEnum
 
 class OrderStatus(StrEnum):
     CONFIRMED = "CONFIRMED"
+    CANCELLED = "CANCELLED"
 
 
 class Nakshatra(StrEnum):
