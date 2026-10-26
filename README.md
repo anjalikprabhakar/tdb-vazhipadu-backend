@@ -76,8 +76,6 @@ src/assessment/
   api/           routers + dependencies
   models/        SQLAlchemy ORM models
   schemas/       Pydantic request/response models
-  services/      business rules (pricing, daily limits, cancellation, reports)
-migrations/      Alembic migrations
 tests/           pytest-asyncio + httpx ASGI client, in-memory SQLite
 doc/             assessment brief and tickets (P0–P4)
 ```
@@ -100,76 +98,3 @@ Each problem is one branch, one PR, one review and one merge, in order (P1 → P
 | P2 – Order Search | [#10](https://github.com/anjalikprabhakar/tdb-vazhipadu-backend/pull/10) |
 | P3 – Daily Limits | [#11](https://github.com/anjalikprabhakar/tdb-vazhipadu-backend/pull/11) |
 | P4 – Cancellation and Daily Collection | [#12](https://github.com/anjalikprabhakar/tdb-vazhipadu-backend/pull/12) |
-
-## Walkthrough
-
-A summary of the decisions taken for each problem and the places where the AI's work was corrected. Each PR's **Assumptions** and **Decisions & trade-offs** sections have the full list and the reasoning.
-
-### Cross-cutting decisions
-
-- **Money is integer paise.** A custom `Money` column stores integer paise and exposes `Decimal`. The API sends amounts as strings (`"110.00"`). SQLite has no exact decimal type: `Numeric` is stored as REAL, so a `SUM` would add floats and could drift by a paisa. That matters most for P4's report.
-- **Time is UTC in the database, IST for business days.** A `UtcDateTime` column rejects naive datetimes. Business days (booking dates, report days) are IST, from `ZoneInfo("Asia/Kolkata")`.
-- **One error format.** Every error, including framework 404/405, malformed JSON and unexpected 500s, is `{"error": {"code", "message", "details"}}`, produced only by the handlers in `errors.py`.
-- **Status codes:**
-  - 422 when the request content is invalid, including an unknown or inactive offering in the body.
-  - 404 only when the resource in the URL doesn't exist.
-  - 409 when a valid request conflicts with current state: a duplicate name, a daily limit reached, an order already cancelled or no longer cancellable.
-- **Layering.** Routers only handle HTTP. Business rules live in `services/`.
-- **Contract first.** From P2 on, each PR commits schemas, models and migration before the logic, checks the OpenAPI diff, and runs `alembic check`. Every change to the API so far has been additive.
-
-### P1 – Offerings and Orders API ([#9](https://github.com/anjalikprabhakar/tdb-vazhipadu-backend/pull/9))
-
-- **Temples.** A minimal `Temple` resource was added up front because later problems query "for a temple". An offering from another temple is treated as unknown.
-- **Price snapshot.** Each line item stores the unit price at order time, so a later price change never alters an existing order or a past report.
-- **Input normalisation:**
-  - Phone numbers are normalised to 10 digits (`+91`, a leading `0`, spaces and hyphens are stripped).
-  - Nakshatra must be one of the 27 Sanskrit names; input is case-insensitive.
-  - The booking date must be today or later in IST.
-- **Order rules.** The same offering twice in one order is rejected rather than merged. Quantity is 1 to 100 per line.
-- **No hard deletes.** Offerings are deactivated, because orders reference them.
-
-### P2 – Order Search ([#10](https://github.com/anjalikprabhakar/tdb-vazhipadu-backend/pull/10))
-
-- **Pagination.** Keyset pagination (`id < cursor ORDER BY id DESC`) rather than offset, so pages never repeat or skip when orders arrive between requests. The trade-off is no "jump to page N" and no total count.
-- **Cursor.** An opaque, strictly validated cursor. Unknown query parameters return 422 rather than being ignored.
-- **Indexes.** Four indexes: `(temple_id, id)`, `(temple_id, booking_date, id)`, `(temple_id, status, id)`, `(temple_id, phone, id)`. Query plans showed the ticket's example indexes needed a temporary sort for three common searches. `tests/test_schema.py` asserts every search uses an index without sorting.
-- **Migrations.** Alembic took over the schema; the app no longer calls `create_all`.
-
-### P3 – Daily Limits ([#11](https://github.com/anjalikprabhakar/tdb-vazhipadu-backend/pull/11))
-
-- **The limit.** An optional `daily_limit`; `null` means unlimited. An order over the limit gets 409 `daily_limit_exceeded`, listing the remaining capacity for each offering that didn't fit.
-- **Atomic booking.** A counter table, `offering_daily_usage`, is updated with a conditional `UPDATE … WHERE booked + :q <= daily_limit` in the same transaction as the order. A whole order is accepted or rejected together.
-  - Not chosen: a `SUM()` check followed by an insert, because that is the race the ticket describes; and `SELECT … FOR UPDATE`, because SQLite doesn't support it.
-- **SQLite write transactions.** Every write service starts its transaction with `BEGIN IMMEDIATE`, so concurrent writers wait for each other instead of failing with `database is locked`.
-- **Lowering a limit.** A limit can be lowered below current bookings. Existing orders stay; new ones are rejected until there is room.
-
-### P4 – Cancellation and Daily Collection ([#12](https://github.com/anjalikprabhakar/tdb-vazhipadu-backend/pull/12))
-
-- **Report date.** The report uses the date the order was placed (`created_at` in IST), not the ritual date. So an order at 00:15 IST counts on that day.
-- **Day bucketing.** The IST day is converted to a UTC `created_at` range, backed by a `(temple_id, created_at)` index. This was chosen over a stored `collection_date` column, which would duplicate data and need a backfill.
-- **Cancel endpoint.** `POST /orders/{id}/cancel`, chosen over `PATCH` on `status`.
-  - Cancelling twice returns 409 `order_already_cancelled`.
-  - Once the booking date has passed in IST, cancelling returns 409 `order_not_cancellable`.
-  - Cancelling changes the status only; refunds are out of scope.
-- **Releasing the limit.** The status change is a conditional `UPDATE … WHERE status='CONFIRMED'`. The daily-limit release happens in the same transaction, so capacity is never released twice.
-- **Report contents:**
-  - It uses the price recorded on each order line and sums integer paise in SQL.
-  - The total is the sum of the returned lines, so it always reconciles.
-  - Offerings with no orders that day are left out.
-- **Accepted trade-off.** Cancelling an order removes it from the report for the day it was placed, even if Finance already reconciled that day. A `cancelled_at` column with an adjustments section is the additive follow-up if reconciled days must stay fixed.
-
-### Where the AI was corrected
-
-The code was written with Claude Code. Every PR also had an independent AI review, read in full before merging. These corrections are recorded in the PRs and their review threads:
-
-| PR | Correction |
-| -- | ---------- |
-| #9 | The pre-PR review found three issues, all fixed before the PR opened. Renaming an offering to an existing name returned 500 instead of 409. The phone check accepted non-ASCII digits. A missing phone had no test. |
-| #10 | Malformed cursors were mishandled. A deeply nested cursor caused a `RecursionError` (500), and invalid base64 was silently accepted as a valid id. Fixed in 1716d53 with strict decoding. |
-| #11 | `BEGIN IMMEDIATE` was first applied only to `place_order`, so offering writes during orders returned 500. Fixed in 939bf02 by applying it to every write service. |
-| #11 | `{"daily_limit": true}` was stored as a limit of 1, and `"5"` and `5.0` were accepted. Fixed in 74a93a3 with strict integer parsing. |
-| #11 | The PR description claimed a naive check-then-insert over-books under the test. Measuring showed `BEGIN IMMEDIATE` alone serialises it on SQLite, so the description was corrected. |
-| #12 | The AI recommended waiting for P3 to merge before starting P4. I started P4 from the P3 branch instead and fast-forwarded it onto `main` after #11 merged. |
-| #12 | For the review question on whether late cancellations may change a reconciled day's total, I chose to keep the behaviour and document it, rather than add `cancelled_at` within the timebox. |
-
-Review questions that were answered without a code change: integer paise versus `Numeric` (#9), and making the SQLite busy timeout configurable or mapping it to a 503 (#11, left as a follow-up). The reasons are in the threads.
