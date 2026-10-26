@@ -8,7 +8,7 @@ argument-hint: "<ResourceName> [field:type ...]"
 
 Input: $ARGUMENTS — e.g. `Order customer_id:int total:decimal status:str`. Ask for fields and which operations (list/get/create/update/delete) are needed if unclear.
 
-Use the `Item` files as the template for style. Names: model `Order`, table `orders`, module `order.py`, router prefix `/orders`, tag `orders`.
+Load the `python-conventions` skill first. Use the `Item` files as the template for wiring; `python-conventions` wins where they differ. Names: model `Order`, table `orders`, module `order.py`, router prefix `/orders`, tag `orders`.
 
 ## Checklist
 

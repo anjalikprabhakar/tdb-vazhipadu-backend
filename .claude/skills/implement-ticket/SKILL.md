@@ -29,6 +29,8 @@ State a short plan: files to add/change, endpoints with method/path/status codes
 
 ## 4. Implement
 
+Load the `python-conventions` skill first; it is the standard every added or modified line is held to.
+
 Follow the existing patterns (`Item` is the reference resource). For each new resource, use the `add-resource` skill's checklist. Key rules from `CLAUDE.md` and the brief:
 
 - Models in `models/`, **re-exported from `models/__init__.py`**.
@@ -51,7 +53,7 @@ Run the `quality-check` skill. Fix failures and rerun until green. Don't weaken 
 
 ## 7. Commit (only when the user asks)
 
-The brief grades Git discipline: commit in **small, meaningful steps** (e.g. `feat(offerings): add offering catalogue endpoints`, `feat(orders): compute order total on server`, `test(orders): cover inactive offering rejection`). Never use summaries like `fix`, `changes`, `wip` or `final`. Stage files by path. End each message with the co-author attribution line from the session's instructions.
+The brief grades Git discipline: commit in **small, meaningful steps** (e.g. `feat(offerings): add offering catalogue endpoints`, `feat(orders): compute order total on server`, `test(orders): cover inactive offering rejection`). Never use summaries like `fix`, `changes`, `wip` or `final`. Stage files by path.
 
 ## 8. Report
 

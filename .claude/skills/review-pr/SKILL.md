@@ -17,7 +17,7 @@ Arguments: $ARGUMENTS
 
 ## 2. Review
 
-- Spawn the `code-reviewer` agent with the PR number and ticket text for an independent pass.
+- Spawn the `code-reviewer` agent with the PR number and ticket text for an independent pass. It applies `.claude/skills/python-conventions/SKILL.md`; only that skill's blocking findings are posted.
 - In parallel, check what the agent can't judge from the diff alone (the brief grades these):
   - **PR template**: Problem, Assumptions, Decisions & trade-offs and How to test are all filled in honestly. Assumptions is not empty.
   - **Scope**: one problem per PR; flag unrelated changes.

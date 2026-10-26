@@ -29,7 +29,7 @@ Also check, as the brief requires: all errors use the one shared JSON error form
 
 ## 3. Independent code review
 
-Spawn the `code-reviewer` agent with the diff range and the ticket text. Do not pass your own conclusions from step 2 — the point is an unanchored second read.
+Spawn the `code-reviewer` agent with the diff range and the ticket text (it applies the `python-conventions` standard). Do not pass your own conclusions from step 2 — the point is an unanchored second read.
 
 ## 4. Quality gates
 
