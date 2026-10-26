@@ -1,8 +1,8 @@
 ---
 name: fix-review-comments
 description: >-
-  Acts on the latest /review-pr review of an open pull request. Reads its findings (Blockers,
-  Suggestions and line comments), verifies each against python-conventions, agrees the fix with you,
+  Acts on the latest /review-pr verdict on an open pull request. Reads its findings table,
+  verifies each row against python-conventions, agrees the fix with you,
   commits on the PR's own branch, posts one plain-English reply table, then pushes. Use when the user
   says "fix the review comments on PR X", "address the review", or similar, with a PR number, URL, or
   the PR already in context. Invoke as "/fix-review-comments 6". Counterpart to /review-pr.
@@ -32,22 +32,24 @@ gh api repos/{owner}/{repo}/pulls/<PR>/comments --paginate --jq '.[] | {id, path
 gh api user --jq .login
 ```
 
-The **latest review whose body has a `Verdict:` line** (the `/review-pr` report format) is the review
-you act on. Its findings are, in this order: each `### Blockers` bullet, each `### Suggestions`
-bullet, then each of that review's line comments not already covered by a bullet. Number them 1..n;
-that numbering is used everywhere below. Add any human line comments that are not yet resolved
-(resolution state is in GraphQL `reviewThreads { isResolved }`; query it if unsure).
+The **latest review or comment whose body starts with `# Verdict:`** is the review you act on; its
+review number `<n>` is in its `Review <n> of #<PR>` line. Parse its Findings table
+(`.claude/conventions/review-template.md`): one row per finding with **No.**, **File**, **Issue** and
+**Fix**. That numbering is used everywhere below. Add any human line comments that are not yet
+resolved (resolution state is in GraphQL `reviewThreads { isResolved }`; query it if unsure).
 
 Read the ticket for intent: the issue linked in the PR body (`gh issue view <N> --json title,body,comments`)
 or the matching file in `doc/tickets/`.
 
-If the latest verdict is `Approve`, or it has no Blockers, Suggestions or line comments, and there
-are no unresolved human comments, say so and stop.
+If the latest verdict is `✅ PASS` and there are no unresolved human comments, the only work left is
+its `Non-blocking:` line comment, which the brief still requires to be answered: reply in that thread
+(step 6's `replies` call), or fix it if the user wants, then stop. No reply table.
 
 ## 2. Load the conventions
 
 Load the `python-conventions` skill (the **Standard** in `CLAUDE.md` under `## Project-specific`)
-when the PR touches Python. It also binds every line you write here.
+when the PR touches Python, and §7 of `.claude/conventions/review-conventions.md`, which binds every
+line of the reply.
 
 ## 3. Verify each finding
 
@@ -98,10 +100,11 @@ Commit atomically, one finding per commit, with a Conventional Commit message th
 Where a CI review runs on push, it snapshots the discussion at the start of its run; a reply posted
 after the push is invisible to that review and the same findings come back. So post the reply first.
 
-Write the reply to a temp file outside the repo (never commit it): a table with one row per finding
-in step 1's order. **File** is the finding's `path:line`, **Issue** is the finding restated in at
-most one sentence, and **Fix** is what was done, at most 25 words: the commit that fixed it, or
-`Not changed:` plus the one-line reason, or `Tracked in #N`. Nothing else goes in the body except a
+Write the reply to a temp file outside the repo (never commit it) as the same table the review used,
+one row per finding in the review's order, keeping its **No.**, **File** and **Issue** cells verbatim
+and replacing **Fix** with what was done, at most 25 words: the commit that fixed it, or
+`Not changed:` plus the one-line reason, or `Tracked in #N`. Human comments you added in step 1 go
+after the review's rows, numbered on. Nothing else goes in the body except a
 first line `Reply to review <n>` (the review count you acted on); when the review author is the same
 login as the viewer that line reads `Reply to my own review <n>`.
 
