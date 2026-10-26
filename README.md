@@ -29,13 +29,26 @@ cp .env.example .env       # optional: APP_DEBUG, APP_DATABASE_URL
 ## Run the app
 
 ```bash
-uv run assessment          # or: uv run uvicorn assessment.main:app --reload
+uv run alembic upgrade head   # create or upgrade the database schema (required before first run)
+uv run assessment             # or: uv run uvicorn assessment.main:app --reload
 ```
 
 - API docs (Swagger UI): http://127.0.0.1:8000/docs
 - Health check: http://127.0.0.1:8000/health
 
 Configuration uses `APP_*` environment variables or `.env`. The database defaults to `sqlite+aiosqlite:///./app.db`.
+
+### Database migrations
+
+The schema is managed by Alembic (`migrations/`). The app does not create tables itself.
+
+```bash
+uv run alembic upgrade head                              # apply all migrations
+uv run alembic revision --autogenerate -m "<change>"     # after changing a model; review the file
+uv run alembic check                                     # fails if models and migrations differ
+```
+
+A local `app.db` created before migrations existed (P1) must be deleted once.
 
 ## Run the tests
 
@@ -44,7 +57,7 @@ uv run pytest                                  # all tests
 uv run pytest tests/test_api.py::test_health   # a single test
 ```
 
-Tests use a fresh in-memory SQLite database per test, so no setup is needed.
+Tests use a fresh in-memory SQLite database per test (built with `create_all` for speed), so no setup is needed. `tests/test_schema.py` separately migrates an empty database, round-trips the migrations, runs `alembic check` and asserts the order searches use indexes.
 
 ## Quality checks
 
