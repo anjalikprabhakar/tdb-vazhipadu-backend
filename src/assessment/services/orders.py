@@ -6,7 +6,7 @@ from sqlalchemy import Select, or_, select, update
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from assessment.clock import today_ist
+from assessment.clock import now_utc, today_ist
 from assessment.db import begin_write
 from assessment.enums import OrderStatus
 from assessment.errors import (
@@ -130,6 +130,7 @@ async def place_order(session: AsyncSession, temple_id: int, data: OrderCreate) 
         booking_date=data.booking_date,
         items=items,
         total_amount=sum((item.line_total for item in items), Decimal("0.00")),
+        created_at=now_utc(),
     )
     session.add(order)
     await session.commit()
