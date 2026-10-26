@@ -6,14 +6,12 @@ from fastapi import FastAPI
 from assessment import models  # noqa: F401  (registers tables on Base.metadata)
 from assessment.api import offerings, orders, temples
 from assessment.config import settings
-from assessment.db import Base, engine
+from assessment.db import engine
 from assessment.errors import register_error_handlers
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     yield
     await engine.dispose()
 

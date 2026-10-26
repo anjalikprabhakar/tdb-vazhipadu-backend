@@ -8,6 +8,7 @@ Uses `uv` (Python 3.11+). Run everything through `uv run`.
 
 ```bash
 uv sync                                   # install deps into .venv
+uv run alembic upgrade head               # apply migrations (required before running the API)
 uv run assessment                         # run API (uvicorn; reload when APP_DEBUG=true)
 uv run uvicorn assessment.main:app --reload
 
@@ -28,13 +29,13 @@ Request flow: router in `api/` → `SessionDep` (`api/deps.py`, wraps `db.get_se
 Wiring that spans files when adding a resource:
 - **Models must be imported in `models/__init__.py`.** `main.py` does `from assessment import models` purely to register tables on `Base.metadata`; an unimported model gets no table.
 - **Routers must be registered** with `app.include_router(...)` in `main.py`.
-- **Migrations:** until P2, tables are created with `Base.metadata.create_all` in the app lifespan and schema changes to existing tables require deleting the local `app.db`. From P2 on (required by the brief), every schema change needs an Alembic migration. Any change to an endpoint, schema field, status code, table, column or index follows `/contract-change`.
+- **Migrations:** the schema is owned by Alembic (`migrations/`, async `env.py`, `render_as_batch=True` for SQLite). The app never calls `create_all`. Every model change needs a reviewed `uv run alembic revision --autogenerate` migration; `uv run alembic check` must report no differences. `env.py` renders the `Money`/`UtcDateTime` column types as `sa.Integer()`/`sa.DateTime(timezone=True)`. Any change to an endpoint, schema field, status code, table, column or index follows `/contract-change`.
 
 Config: `config.py` exposes a module-level `settings` (pydantic-settings, `APP_` env prefix, reads `.env`). The engine in `db.py` is built from it at import time.
 
 ## Tests
 
-pytest-asyncio with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed). The `client` fixture in `tests/conftest.py` creates a fresh in-memory SQLite engine per test, runs `create_all` itself (httpx `ASGITransport` does not run the app lifespan), and overrides `get_session` via `app.dependency_overrides`.
+pytest-asyncio with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed). The `client` fixture in `tests/conftest.py` creates a fresh in-memory SQLite engine per test, runs `create_all` itself (httpx `ASGITransport` does not run the app lifespan), and overrides `get_session` via `app.dependency_overrides`. Tests keep `create_all` on in-memory SQLite for speed; `tests/test_schema.py` separately migrates an empty file database, round-trips it, runs `alembic check`, and asserts the order-search query plans use indexes.
 
 ## Workflow (skills in `.claude/skills/`)
 

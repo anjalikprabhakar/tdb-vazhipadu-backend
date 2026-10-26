@@ -1,9 +1,11 @@
-from fastapi import APIRouter, status
+from typing import Annotated
+
+from fastapi import APIRouter, Query, status
 
 from assessment.api.deps import SessionDep
 from assessment.ids import PathId
 from assessment.models import Order
-from assessment.schemas.order import OrderCreate, OrderRead
+from assessment.schemas.order import OrderCreate, OrderPage, OrderRead, OrderSearch
 from assessment.services import orders
 
 router = APIRouter(tags=["orders"])
@@ -16,6 +18,13 @@ router = APIRouter(tags=["orders"])
 )
 async def place_order(temple_id: PathId, payload: OrderCreate, session: SessionDep) -> Order:
     return await orders.place_order(session, temple_id, payload)
+
+
+@router.get("/temples/{temple_id}/orders", response_model=OrderPage)
+async def search_orders(
+    temple_id: PathId, search: Annotated[OrderSearch, Query()], session: SessionDep
+) -> orders.OrderSearchResult:
+    return await orders.search_orders(session, temple_id, search)
 
 
 @router.get("/orders/{order_id}", response_model=OrderRead)

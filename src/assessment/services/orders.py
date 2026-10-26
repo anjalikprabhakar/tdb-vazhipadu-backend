@@ -1,11 +1,13 @@
+from dataclasses import dataclass
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from assessment.errors import BusinessRuleError, NotFoundError
 from assessment.models import Offering, Order, OrderItem
-from assessment.schemas.order import OrderCreate
+from assessment.pagination import encode_cursor
+from assessment.schemas.order import OrderCreate, OrderSearch
 from assessment.services.temples import get_temple
 
 
@@ -68,3 +70,32 @@ async def get_order(session: AsyncSession, order_id: int) -> Order:
     if order is None:
         raise NotFoundError("Order", order_id)
     return order
+
+
+@dataclass(frozen=True)
+class OrderSearchResult:
+    items: list[Order]
+    next_cursor: str | None
+
+
+def build_order_search(temple_id: int, search: OrderSearch) -> Select[Order]:
+    query = select(Order).where(Order.temple_id == temple_id)
+    if search.booking_date is not None:
+        query = query.where(Order.booking_date == search.booking_date)
+    if search.status is not None:
+        query = query.where(Order.status == search.status)
+    if search.phone is not None:
+        query = query.where(Order.phone == search.phone)
+    if search.cursor is not None:
+        query = query.where(Order.id < search.cursor)
+    return query.order_by(Order.id.desc()).limit(search.limit + 1)
+
+
+async def search_orders(
+    session: AsyncSession, temple_id: int, search: OrderSearch
+) -> OrderSearchResult:
+    await get_temple(session, temple_id)
+    found = list(await session.scalars(build_order_search(temple_id, search)))
+    page = found[: search.limit]
+    next_cursor = encode_cursor(page[-1].id) if len(found) > search.limit else None
+    return OrderSearchResult(items=page, next_cursor=next_cursor)

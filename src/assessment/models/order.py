@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from assessment.clock import now_utc
@@ -30,6 +30,12 @@ class OrderItem(Base):
 
 class Order(Base):
     __tablename__ = "orders"
+    __table_args__ = (
+        Index("ix_orders_temple_id_id", "temple_id", "id"),
+        Index("ix_orders_temple_booking_date_id", "temple_id", "booking_date", "id"),
+        Index("ix_orders_temple_status_id", "temple_id", "status", "id"),
+        Index("ix_orders_temple_phone_id", "temple_id", "phone", "id"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     temple_id: Mapped[int] = mapped_column(ForeignKey("temples.id"))
