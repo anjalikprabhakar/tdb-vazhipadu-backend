@@ -9,6 +9,7 @@ from pydantic import (
     BeforeValidator,
     ConfigDict,
     Field,
+    WithJsonSchema,
     field_validator,
     model_validator,
 )
@@ -16,9 +17,12 @@ from pydantic import (
 from assessment.clock import today_ist
 from assessment.enums import Nakshatra, OrderStatus
 from assessment.ids import DbId
+from assessment.pagination import decode_cursor
 from assessment.phone import normalise_phone
 
 MAX_QUANTITY_PER_ITEM = 100
+DEFAULT_PAGE_SIZE = 20
+MAX_PAGE_SIZE = 100
 
 
 def _canonical_nakshatra(value: Any) -> Any:
@@ -29,6 +33,7 @@ def _canonical_nakshatra(value: Any) -> Any:
 
 Phone = Annotated[str, AfterValidator(normalise_phone)]
 NakshatraInput = Annotated[Nakshatra, BeforeValidator(_canonical_nakshatra)]
+Cursor = Annotated[int, BeforeValidator(decode_cursor), WithJsonSchema({"type": "string"})]
 
 
 class OrderItemCreate(BaseModel):
@@ -83,3 +88,20 @@ class OrderRead(BaseModel):
     items: list[OrderItemRead]
     total_amount: Decimal
     created_at: datetime
+
+
+class OrderSearch(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    booking_date: date | None = None
+    status: OrderStatus | None = None
+    phone: Phone | None = None
+    limit: int = Field(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE)
+    cursor: Cursor | None = None
+
+
+class OrderPage(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    items: list[OrderRead]
+    next_cursor: str | None
