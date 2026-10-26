@@ -46,6 +46,13 @@ Helpers: `/quality-check` (all four gates), `/add-resource <Name> field:type ...
 PR body follows `.github/pull_request_template.md` (Problem / Assumptions / Decisions & trade-offs / How to test; Assumptions is mandatory). Branches: `feature/p<N>-<slug>` / `fix/...`; small, meaningful Conventional Commits (never `fix`, `wip`, `changes`, `final`). The README links every PR.
 A PostToolUse hook (`.claude/hooks/format_python.py`) runs `ruff format` + `ruff check --fix` on every edited `.py` file and surfaces unfixable lint errors.
 
+## Project-specific
+
+- **Stack**: Python (FastAPI, async SQLAlchemy 2, Pydantic v2, SQLite via aiosqlite).
+- **Package Manager**: `uv` (`uv sync`, `uv add`, `uv run`).
+- **Gate Commands**: `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy src tests`.
+- **Standard**: `.claude/skills/python-conventions/SKILL.md` is the bar for all Python changes.
+
 ## Conventions
 
 - mypy `strict = true`: all functions (including tests) need full type annotations.
