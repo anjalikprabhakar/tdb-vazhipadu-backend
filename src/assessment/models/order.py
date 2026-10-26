@@ -35,6 +35,7 @@ class Order(Base):
         Index("ix_orders_temple_booking_date_id", "temple_id", "booking_date", "id"),
         Index("ix_orders_temple_status_id", "temple_id", "status", "id"),
         Index("ix_orders_temple_phone_id", "temple_id", "phone", "id"),
+        Index("ix_orders_temple_created_at", "temple_id", "created_at"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
