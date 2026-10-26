@@ -31,6 +31,8 @@ Wiring that spans files when adding a resource:
 - **Routers must be registered** with `app.include_router(...)` in `main.py`.
 - **Migrations:** the schema is owned by Alembic (`migrations/`, async `env.py`, `render_as_batch=True` for SQLite). The app never calls `create_all`. Every model change needs a reviewed `uv run alembic revision --autogenerate` migration; `uv run alembic check` must report no differences. `env.py` renders the `Money`/`UtcDateTime` column types as `sa.Integer()`/`sa.DateTime(timezone=True)`. Any change to an endpoint, schema field, status code, table, column or index follows `/contract-change`.
 
+Concurrency: invariants that must hold under simultaneous requests are enforced in the database. Order placement keeps per-offering, per-date counters in `offering_daily_usage` and books capacity with a conditional `UPDATE ... WHERE booked + :q <= daily_limit` in the same transaction as the order. On SQLite, **every write service** (`create_temple`, `create_offering`, `update_offering`, `place_order`, and any new one) calls `db.begin_write(session)` as its first statement so the transaction starts with `BEGIN IMMEDIATE` (`enable_sqlite_immediate` installs the hook; test engines call it too); a write service that reads first otherwise fails with `database is locked` (500) whenever an order holds the write lock. Read-only services keep a plain `BEGIN`.
+
 Config: `config.py` exposes a module-level `settings` (pydantic-settings, `APP_` env prefix, reads `.env`). The engine in `db.py` is built from it at import time.
 
 ## Tests

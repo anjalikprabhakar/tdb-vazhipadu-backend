@@ -1,13 +1,16 @@
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, or_, select, update
+from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from assessment.errors import BusinessRuleError, NotFoundError
-from assessment.models import Offering, Order, OrderItem
+from assessment.db import begin_write
+from assessment.errors import BusinessRuleError, DailyLimitExceededError, NotFoundError
+from assessment.models import Offering, OfferingDailyUsage, Order, OrderItem
 from assessment.pagination import encode_cursor
-from assessment.schemas.order import OrderCreate, OrderSearch
+from assessment.schemas.order import OrderCreate, OrderItemCreate, OrderSearch
 from assessment.services.temples import get_temple
 
 
@@ -37,11 +40,72 @@ async def _load_bookable_offerings(
     return offerings
 
 
+async def _book_capacity(session: AsyncSession, booking_date: date, item: OrderItemCreate) -> bool:
+    await session.execute(
+        insert(OfferingDailyUsage)
+        .values(offering_id=item.offering_id, booking_date=booking_date, booked=0)
+        .on_conflict_do_nothing()
+    )
+    limit = select(Offering.daily_limit).where(Offering.id == item.offering_id).scalar_subquery()
+    booked = await session.scalar(
+        update(OfferingDailyUsage)
+        .where(
+            OfferingDailyUsage.offering_id == item.offering_id,
+            OfferingDailyUsage.booking_date == booking_date,
+            or_(limit.is_(None), OfferingDailyUsage.booked + item.quantity <= limit),
+        )
+        .values(booked=OfferingDailyUsage.booked + item.quantity)
+        .returning(OfferingDailyUsage.booked)
+        .execution_options(synchronize_session=False)
+    )
+    return booked is not None
+
+
+async def _remaining_capacity(
+    session: AsyncSession, booking_date: date, offering_ids: list[int]
+) -> dict[int, int]:
+    rows = await session.execute(
+        select(Offering.id, Offering.daily_limit, OfferingDailyUsage.booked)
+        .join(OfferingDailyUsage, OfferingDailyUsage.offering_id == Offering.id)
+        .where(Offering.id.in_(offering_ids), OfferingDailyUsage.booking_date == booking_date)
+    )
+    return {offering_id: max((limit or 0) - booked, 0) for offering_id, limit, booked in rows}
+
+
+async def _reserve_daily_capacity(
+    session: AsyncSession, booking_date: date, items: list[OrderItemCreate]
+) -> None:
+    exceeded = [
+        item
+        for item in sorted(items, key=lambda item: item.offering_id)
+        if not await _book_capacity(session, booking_date, item)
+    ]
+    if not exceeded:
+        return
+    remaining = await _remaining_capacity(
+        session, booking_date, [item.offering_id for item in exceeded]
+    )
+    await session.rollback()
+    raise DailyLimitExceededError(
+        [
+            {
+                "offering_id": item.offering_id,
+                "booking_date": booking_date.isoformat(),
+                "requested": item.quantity,
+                "remaining": remaining[item.offering_id],
+            }
+            for item in exceeded
+        ]
+    )
+
+
 async def place_order(session: AsyncSession, temple_id: int, data: OrderCreate) -> Order:
+    await begin_write(session)
     await get_temple(session, temple_id)
     offerings = await _load_bookable_offerings(
         session, temple_id, [item.offering_id for item in data.items]
     )
+    await _reserve_daily_capacity(session, data.booking_date, data.items)
 
     items = [
         OrderItem(

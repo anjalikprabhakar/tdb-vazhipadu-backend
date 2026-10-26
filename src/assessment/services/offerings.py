@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from assessment.db import begin_write
 from assessment.errors import ConflictError, NotFoundError
 from assessment.models import Offering
 from assessment.schemas.offering import OfferingCreate, OfferingUpdate
@@ -19,6 +20,7 @@ async def _commit_offering(session: AsyncSession, offering: Offering) -> Offerin
 
 
 async def create_offering(session: AsyncSession, temple_id: int, data: OfferingCreate) -> Offering:
+    await begin_write(session)
     await get_temple(session, temple_id)
     offering = Offering(temple_id=temple_id, **data.model_dump())
     session.add(offering)
@@ -45,6 +47,7 @@ async def get_offering(session: AsyncSession, offering_id: int) -> Offering:
 async def update_offering(
     session: AsyncSession, offering_id: int, data: OfferingUpdate
 ) -> Offering:
+    await begin_write(session)
     offering = await get_offering(session, offering_id)
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(offering, field, value)

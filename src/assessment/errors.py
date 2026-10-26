@@ -33,6 +33,14 @@ class ConflictError(AppError):
     code = "conflict"
 
 
+class DailyLimitExceededError(AppError):
+    status_code = HTTPStatus.CONFLICT
+    code = "daily_limit_exceeded"
+
+    def __init__(self, details: list[dict[str, Any]]) -> None:
+        super().__init__("Some offerings do not have enough capacity on this date", details)
+
+
 class BusinessRuleError(AppError):
     status_code = HTTPStatus.UNPROCESSABLE_ENTITY
 

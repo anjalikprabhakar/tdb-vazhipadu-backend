@@ -76,3 +76,37 @@ def test_order_search_uses_index_without_sorting_when_planned(
         assert any(f"USING INDEX {index} " in line for line in plan)
     assert not any(line.startswith("SCAN orders") for line in plan)
     assert not any("TEMP B-TREE" in line for line in plan)
+
+
+def test_daily_usage_backfilled_from_existing_orders_when_migrated(tmp_path: Path) -> None:
+    database = tmp_path / "upgrade.db"
+    config = alembic_config(database)
+    command.upgrade(config, "0002")
+    with sqlite3.connect(database) as connection:
+        connection.executescript(
+            """
+            INSERT INTO temples (id, name) VALUES (1, 'Guruvayur');
+            INSERT INTO offerings (id, temple_id, name, price, is_active)
+                VALUES (1, 1, 'Archana', 5000, 1), (2, 1, 'Pooja', 500000, 1);
+            INSERT INTO orders (id, temple_id, devotee_name, phone, nakshatra, booking_date,
+                                status, total_amount, created_at)
+                VALUES (1, 1, 'A', '9876543210', 'ROHINI', '2030-01-01', 'CONFIRMED', 0,
+                        '2026-10-26 00:00:00+00:00'),
+                       (2, 1, 'B', '9876543210', 'ROHINI', '2030-01-01', 'CONFIRMED', 0,
+                        '2026-10-26 00:00:00+00:00'),
+                       (3, 1, 'C', '9876543210', 'ROHINI', '2030-01-02', 'CONFIRMED', 0,
+                        '2026-10-26 00:00:00+00:00');
+            INSERT INTO order_items (order_id, offering_id, quantity, unit_price)
+                VALUES (1, 1, 2, 5000), (1, 2, 1, 500000), (2, 1, 3, 5000), (3, 1, 4, 5000);
+            """
+        )
+
+    command.upgrade(config, "head")
+
+    with sqlite3.connect(database) as connection:
+        usage = connection.execute(
+            "SELECT offering_id, booking_date, booked FROM offering_daily_usage ORDER BY 1, 2"
+        ).fetchall()
+        limits = connection.execute("SELECT daily_limit FROM offerings").fetchall()
+    assert usage == [(1, "2030-01-01", 5), (1, "2030-01-02", 4), (2, "2030-01-01", 1)]
+    assert limits == [(None,), (None,)]
