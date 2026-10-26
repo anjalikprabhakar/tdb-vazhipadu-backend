@@ -266,3 +266,16 @@ async def test_not_found_when_order_missing(client: AsyncClient) -> None:
         "message": "Order 999 not found",
         "details": [],
     }
+
+
+async def test_validation_error_when_offering_id_out_of_range(
+    client: AsyncClient, temple_id: int, booking_date: str
+) -> None:
+    payload = order_payload(booking_date, [{"offering_id": 2**63, "quantity": 1}])
+
+    resp = await client.post(f"/temples/{temple_id}/orders", json=payload)
+
+    assert resp.status_code == 422
+    error = resp.json()["error"]
+    assert error["code"] == "validation_error"
+    assert [detail["field"] for detail in error["details"]] == ["items.0.offering_id"]

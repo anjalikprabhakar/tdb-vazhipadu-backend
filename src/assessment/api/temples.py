@@ -1,6 +1,7 @@
 from fastapi import APIRouter, status
 
 from assessment.api.deps import SessionDep
+from assessment.ids import PathId
 from assessment.models import Temple
 from assessment.schemas.temple import TempleCreate, TempleRead
 from assessment.services import temples
@@ -14,5 +15,5 @@ async def create_temple(payload: TempleCreate, session: SessionDep) -> Temple:
 
 
 @router.get("/{temple_id}", response_model=TempleRead)
-async def get_temple(temple_id: int, session: SessionDep) -> Temple:
+async def get_temple(temple_id: PathId, session: SessionDep) -> Temple:
     return await temples.get_temple(session, temple_id)

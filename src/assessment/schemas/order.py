@@ -15,6 +15,7 @@ from pydantic import (
 
 from assessment.clock import today_ist
 from assessment.enums import Nakshatra, OrderStatus
+from assessment.ids import DbId
 from assessment.phone import normalise_phone
 
 MAX_QUANTITY_PER_ITEM = 100
@@ -31,7 +32,7 @@ NakshatraInput = Annotated[Nakshatra, BeforeValidator(_canonical_nakshatra)]
 
 
 class OrderItemCreate(BaseModel):
-    offering_id: int = Field(gt=0)
+    offering_id: DbId
     quantity: int = Field(ge=1, le=MAX_QUANTITY_PER_ITEM)
 
 

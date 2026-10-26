@@ -1,3 +1,4 @@
+import pytest
 from httpx import AsyncClient
 
 
@@ -31,3 +32,22 @@ async def test_standard_error_format_when_body_not_json(client: AsyncClient) -> 
 
     assert resp.status_code == 422
     assert resp.json()["error"]["code"] == "validation_error"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        f"/temples/{2**63}",
+        f"/temples/{2**63}/offerings",
+        f"/offerings/{2**63}",
+        f"/orders/{2**63}",
+        "/orders/0",
+    ],
+)
+async def test_validation_error_when_path_id_out_of_range(client: AsyncClient, path: str) -> None:
+    resp = await client.get(path)
+
+    assert resp.status_code == 422
+    error = resp.json()["error"]
+    assert error["code"] == "validation_error"
+    assert error["details"][0]["field"].endswith("_id")
