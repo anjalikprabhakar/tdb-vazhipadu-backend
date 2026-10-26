@@ -19,7 +19,7 @@ The brief requires every PR to have at least one line review comment that is **a
 
 ## 2. Triage
 
-For each comment, decide: **fix**, **discuss** (disagree, with a concrete reason), or **already done**. Show the triage table to the user before editing if any item is "discuss" or the change is large.
+Check each comment against the `python-conventions` skill: a comment that names a **Blocking in review** rule or a real defect is a fix; a style preference may be answered with a reply. For each comment, decide: **fix**, **discuss** (disagree, with a concrete reason), or **already done**. Show the triage table to the user before editing if any item is "discuss" or the change is large.
 
 ## 3. Fix
 
@@ -27,7 +27,7 @@ Make the changes, adding/adjusting tests where behaviour changes. Run the `quali
 
 ## 4. Commit and reply (ask before pushing)
 
-- Commit per logical fix with a message that says what changed, e.g. `fix(orders): reject duplicate offering ids in one order`. Never use a vague summary like `fix` or `address review feedback`. End with the co-author attribution line from the session's instructions. Push with `git push` (never force).
+- Commit per logical fix with a message that says what changed, e.g. `fix(orders): reject duplicate offering ids in one order`. Never use a vague summary like `fix` or `address review feedback`. Push with `git push` (never force).
 - Reply to **every** line comment: `gh api repos/{owner}/{repo}/pulls/<n>/comments/<comment_id>/replies -f body="..."`. Name the commit that fixed it, or explain briefly why no change is needed.
 
 ## 5. Report

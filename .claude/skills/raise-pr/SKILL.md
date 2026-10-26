@@ -20,7 +20,7 @@ Arguments: $ARGUMENTS
 
 - `git status` and `git diff`: review what will be committed. Never commit `.env`, `*.db`, or caches (they're gitignored; double-check nothing slipped in). **No secrets.**
 - Stage files explicitly by path (not `git add -A`).
-- Prefer **several small, meaningful commits** over one big one (e.g. model + migration, endpoints, tests). Conventional Commits: `<type>(<scope>): <summary>` (types: feat, fix, refactor, test, docs, chore). The summary says what changed, e.g. `feat(orders): compute order total on server`. **Never** use bare summaries like `fix`, `changes`, `wip` or `final`. Add a `Refs: <ticket>` line when there is a ticket. End with the co-author attribution line from the session's instructions.
+- Prefer **several small, meaningful commits** over one big one (e.g. model + migration, endpoints, tests). Conventional Commits: `<type>(<scope>): <summary>` (types: feat, fix, refactor, test, docs, chore). The summary says what changed, e.g. `feat(orders): compute order total on server`. **Never** use bare summaries like `fix`, `changes`, `wip` or `final`. Add a `Refs: <ticket>` line when there is a ticket.
 
 ## 3. Push
 
