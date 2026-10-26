@@ -30,6 +30,7 @@ State a short plan: files to add/change, endpoints with method/path/status codes
 ## 4. Implement
 
 Load the `python-conventions` skill first; it is the standard every added or modified line is held to.
+If the ticket adds or reshapes an endpoint, a schema field, a status code, a table, a column or an index, follow the `contract-change` skill: its schema, migration and contract-test commits come before the service logic.
 
 Follow the existing patterns (`Item` is the reference resource). For each new resource, use the `add-resource` skill's checklist. Key rules from `CLAUDE.md` and the brief:
 
