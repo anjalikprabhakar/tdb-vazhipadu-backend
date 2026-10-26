@@ -1,3 +1,4 @@
+import base64
 from datetime import timedelta
 from typing import Any
 
@@ -5,6 +6,7 @@ import pytest
 from httpx import AsyncClient
 
 from assessment.clock import today_ist
+from assessment.ids import MAX_DB_ID
 from assessment.pagination import encode_cursor
 from tests.conftest import OfferingFactory
 
@@ -181,6 +183,11 @@ async def test_empty_page_returned_when_no_orders_match(
         ({"cursor": "not-a-cursor"}, "cursor"),
         ({"cursor": encode_cursor(0)}, "cursor"),
         ({"cursor": "eyJpZCI6InRlbiJ9"}, "cursor"),
+        ({"cursor": base64.urlsafe_b64encode(b"[" * 5000).decode()}, "cursor"),
+        ({"cursor": encode_cursor(5) + "!!!"}, "cursor"),
+        ({"cursor": encode_cursor(10) + "="}, "cursor"),
+        ({"cursor": base64.urlsafe_b64encode(b"05").decode().rstrip("=")}, "cursor"),
+        ({"cursor": encode_cursor(MAX_DB_ID + 1)}, "cursor"),
         ({"phone": "12345"}, "phone"),
         ({"status": "UNKNOWN"}, "status"),
         ({"booking_date": "26-10-2026"}, "booking_date"),
