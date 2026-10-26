@@ -19,3 +19,4 @@ wheels/
 # IDE / local tool settings
 .idea/
 .claude/settings.local.json
+.claude/worktrees/

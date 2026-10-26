@@ -41,7 +41,7 @@ pytest-asyncio with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed). 
 Assessment brief: `doc/Backend_SE_GRADE_II.pdf`; tickets P0–P4 in `doc/tickets/`. One branch → PR → review → merge per problem, in order; never commit to `main` after setup.
 
 Ticket → PR flow: `/implement-ticket <P1|#issue>` → `/review-ticket <ticket>` → `/raise-pr` → `/review-pr <n> --post` (at least one line comment) → `/address-pr-feedback <n>` → `/merge-pr <n>`.
-Helpers: `/quality-check` (all four gates), `/add-resource <Name> field:type ...` (model/schema/router/tests scaffold).
+Helpers: `/quality-check` (all four gates), `/add-resource <Name> field:type ...` (model/schema/router/tests scaffold), `/fix-review-comments <n>` (verify and fix the latest `/review-pr` findings, reply, push).
 `code-reviewer` agent (`.claude/agents/`) gives an independent read-only review; used by the review skills.
 PR body follows `.github/pull_request_template.md` (Problem / Assumptions / Decisions & trade-offs / How to test; Assumptions is mandatory). Branches: `feature/p<N>-<slug>` / `fix/...`; small, meaningful Conventional Commits (never `fix`, `wip`, `changes`, `final`). The README links every PR.
 A PostToolUse hook (`.claude/hooks/format_python.py`) runs `ruff format` + `ruff check --fix` on every edited `.py` file and surfaces unfixable lint errors.
