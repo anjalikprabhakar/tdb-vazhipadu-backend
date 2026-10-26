@@ -4,9 +4,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from assessment import models  # noqa: F401  (registers tables on Base.metadata)
-from assessment.api import items
+from assessment.api import offerings, orders, temples
 from assessment.config import settings
 from assessment.db import Base, engine
+from assessment.errors import register_error_handlers
 
 
 @asynccontextmanager
@@ -18,7 +19,10 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
-app.include_router(items.router)
+register_error_handlers(app)
+app.include_router(temples.router)
+app.include_router(offerings.router)
+app.include_router(orders.router)
 
 
 @app.get("/health", tags=["health"])
