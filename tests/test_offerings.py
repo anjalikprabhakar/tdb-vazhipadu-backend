@@ -18,6 +18,7 @@ async def test_offering_created_active_when_flag_omitted(
         "name": "Pushpanjali",
         "price": "30.00",
         "is_active": True,
+        "daily_limit": None,
     }
 
 
