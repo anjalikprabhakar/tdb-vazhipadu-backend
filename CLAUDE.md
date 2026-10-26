@@ -28,7 +28,7 @@ Request flow: router in `api/` → `SessionDep` (`api/deps.py`, wraps `db.get_se
 Wiring that spans files when adding a resource:
 - **Models must be imported in `models/__init__.py`.** `main.py` does `from assessment import models` purely to register tables on `Base.metadata`; an unimported model gets no table.
 - **Routers must be registered** with `app.include_router(...)` in `main.py`.
-- **Migrations:** until P2, tables are created with `Base.metadata.create_all` in the app lifespan and schema changes to existing tables require deleting the local `app.db`. From P2 on (required by the brief), every schema change needs an Alembic migration.
+- **Migrations:** until P2, tables are created with `Base.metadata.create_all` in the app lifespan and schema changes to existing tables require deleting the local `app.db`. From P2 on (required by the brief), every schema change needs an Alembic migration. Any change to an endpoint, schema field, status code, table, column or index follows `/contract-change`.
 
 Config: `config.py` exposes a module-level `settings` (pydantic-settings, `APP_` env prefix, reads `.env`). The engine in `db.py` is built from it at import time.
 
