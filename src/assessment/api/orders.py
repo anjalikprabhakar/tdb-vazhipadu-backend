@@ -30,3 +30,8 @@ async def search_orders(
 @router.get("/orders/{order_id}", response_model=OrderRead)
 async def get_order(order_id: PathId, session: SessionDep) -> Order:
     return await orders.get_order(session, order_id)
+
+
+@router.post("/orders/{order_id}/cancel", response_model=OrderRead)
+async def cancel_order(order_id: PathId, session: SessionDep) -> Order:
+    return await orders.cancel_order(session, order_id)

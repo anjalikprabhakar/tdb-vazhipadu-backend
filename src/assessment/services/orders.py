@@ -6,8 +6,15 @@ from sqlalchemy import Select, or_, select, update
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from assessment.clock import today_ist
 from assessment.db import begin_write
-from assessment.errors import BusinessRuleError, DailyLimitExceededError, NotFoundError
+from assessment.enums import OrderStatus
+from assessment.errors import (
+    BusinessRuleError,
+    ConflictError,
+    DailyLimitExceededError,
+    NotFoundError,
+)
 from assessment.models import Offering, OfferingDailyUsage, Order, OrderItem
 from assessment.pagination import encode_cursor
 from assessment.schemas.order import OrderCreate, OrderItemCreate, OrderSearch
@@ -133,6 +140,44 @@ async def get_order(session: AsyncSession, order_id: int) -> Order:
     order = await session.get(Order, order_id)
     if order is None:
         raise NotFoundError("Order", order_id)
+    return order
+
+
+def _already_cancelled(order_id: int) -> ConflictError:
+    return ConflictError(f"Order {order_id} is already cancelled", code="order_already_cancelled")
+
+
+async def cancel_order(session: AsyncSession, order_id: int) -> Order:
+    await begin_write(session)
+    order = await get_order(session, order_id)
+    if order.status == OrderStatus.CANCELLED:
+        raise _already_cancelled(order_id)
+    if order.booking_date < today_ist():
+        raise ConflictError(
+            f"Order {order_id} was for {order.booking_date.isoformat()}, which has passed (IST)",
+            code="order_not_cancellable",
+        )
+
+    cancelled = await session.scalar(
+        update(Order)
+        .where(Order.id == order_id, Order.status == OrderStatus.CONFIRMED)
+        .values(status=OrderStatus.CANCELLED)
+        .returning(Order.id)
+    )
+    if cancelled is None:
+        await session.rollback()
+        raise _already_cancelled(order_id)
+    for item in order.items:
+        await session.execute(
+            update(OfferingDailyUsage)
+            .where(
+                OfferingDailyUsage.offering_id == item.offering_id,
+                OfferingDailyUsage.booking_date == order.booking_date,
+            )
+            .values(booked=OfferingDailyUsage.booked - item.quantity)
+            .execution_options(synchronize_session=False)
+        )
+    await session.commit()
     return order
 
 
