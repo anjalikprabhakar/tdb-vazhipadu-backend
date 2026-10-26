@@ -1,6 +1,6 @@
 ---
 name: add-resource
-description: Scaffold a new CRUD domain resource (SQLAlchemy model, Pydantic schemas, FastAPI router, tests) wired into the app the same way as Item. Use when adding a new entity/endpoint group, or when a ticket introduces a new resource.
+description: Scaffold a new CRUD domain resource (SQLAlchemy model, Pydantic schemas, FastAPI router, tests) wired into the app the same way as Offering. Use when adding a new entity/endpoint group, or when a ticket introduces a new resource.
 argument-hint: "<ResourceName> [field:type ...]"
 ---
 
@@ -8,7 +8,7 @@ argument-hint: "<ResourceName> [field:type ...]"
 
 Input: $ARGUMENTS — e.g. `Order customer_id:int total:decimal status:str`. Ask for fields and which operations (list/get/create/update/delete) are needed if unclear.
 
-Load the `python-conventions` skill first. Use the `Item` files as the template for wiring; `python-conventions` wins where they differ. Names: model `Order`, table `orders`, module `order.py`, router prefix `/orders`, tag `orders`.
+Load the `python-conventions` skill first. Use the `Offering` files (model, schema, service, router, tests) as the template for wiring; `python-conventions` wins where they differ. Names: model `Order`, table `orders`, module `order.py`, router prefix `/orders`, tag `orders`.
 
 ## Checklist
 

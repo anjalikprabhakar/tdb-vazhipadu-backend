@@ -21,9 +21,9 @@ API docs at http://127.0.0.1:8000/docs.
 
 ## Architecture
 
-FastAPI + async SQLAlchemy 2 (aiosqlite) in a `src/` layout package `assessment`. `Item` is a placeholder resource meant to be replaced by the assessment's real domain.
+FastAPI + async SQLAlchemy 2 (aiosqlite) in a `src/` layout package `assessment`. Domain: temples, offerings and orders for vazhipadu booking. Business rules live in `services/`; errors use the shared JSON format from `errors.py`; money uses the `Money` column type (integer paise in the DB, `Decimal` in Python).
 
-Request flow: router in `api/` → `SessionDep` (`api/deps.py`, wraps `db.get_session`) → SQLAlchemy model in `models/` → returned via a Pydantic schema in `schemas/` (`*Read` schemas use `from_attributes=True` so endpoints return ORM objects directly with `response_model`).
+Request flow: router in `api/` → `SessionDep` (`api/deps.py`, wraps `db.get_session`) → service in `services/` → SQLAlchemy model in `models/` → returned via a Pydantic schema in `schemas/` (`*Read` schemas use `from_attributes=True` so endpoints return ORM objects directly with `response_model`).
 
 Wiring that spans files when adding a resource:
 - **Models must be imported in `models/__init__.py`.** `main.py` does `from assessment import models` purely to register tables on `Base.metadata`; an unimported model gets no table.

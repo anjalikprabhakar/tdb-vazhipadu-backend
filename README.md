@@ -81,7 +81,7 @@ Each problem is one branch, one PR, one review and one merge, in order (P1 → P
 
 | Problem | PR |
 | ------- | -- |
-| P1 – Offerings and Orders API | _TBD_ |
+| P1 – Offerings and Orders API | [#9](https://github.com/anjalikprabhakar/tdb-vazhipadu-backend/pull/9) |
 | P2 – Order Search | _TBD_ |
 | P3 – Daily Limits | _TBD_ |
 | P4 – Cancellation and Daily Collection | _TBD_ |
