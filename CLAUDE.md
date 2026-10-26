@@ -40,9 +40,9 @@ pytest-asyncio with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed). 
 
 Assessment brief: `doc/Backend_SE_GRADE_II.pdf`; tickets P0–P4 in `doc/tickets/`. One branch → PR → review → merge per problem, in order; never commit to `main` after setup.
 
-Ticket → PR flow: `/implement-ticket <P1|#issue>` → `/review-ticket <ticket>` → `/raise-pr` → `/review-pr <n> --post` (at least one line comment) → `/address-pr-feedback <n>` → `/merge-pr <n>`.
-Helpers: `/quality-check` (all four gates), `/add-resource <Name> field:type ...` (model/schema/router/tests scaffold), `/fix-review-comments <n>` (verify and fix the latest `/review-pr` findings, reply, push).
-`code-reviewer` agent (`.claude/agents/`) gives an independent read-only review; used by the review skills.
+Ticket → PR flow: `/implement-ticket <P1|#issue>` → `/review-ticket <ticket>` → `/raise-pr` → `/review-pr <n>` (one verdict plus line comments) → `/fix-review-comments <n>` → `/merge-pr <n>`.
+Helpers: `/quality-check` (all four gates), `/add-resource <Name> field:type ...` (model/schema/router/tests scaffold).
+`code-reviewer` agent (`.claude/agents/`) gives an independent read-only review; used by the review skills. The review method and body shapes are in `.claude/conventions/review-conventions.md` and `review-template.md`.
 PR body follows `.github/pull_request_template.md` (Problem / Assumptions / Decisions & trade-offs / How to test; Assumptions is mandatory). Branches: `feature/p<N>-<slug>` / `fix/...`; small, meaningful Conventional Commits (never `fix`, `wip`, `changes`, `final`). The README links every PR.
 A PostToolUse hook (`.claude/hooks/format_python.py`) runs `ruff format` + `ruff check --fix` on every edited `.py` file and surfaces unfixable lint errors.
 
@@ -52,6 +52,8 @@ A PostToolUse hook (`.claude/hooks/format_python.py`) runs `ruff format` + `ruff
 - **Package Manager**: `uv` (`uv sync`, `uv add`, `uv run`).
 - **Gate Commands**: `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy src tests`.
 - **Standard**: `.claude/skills/python-conventions/SKILL.md` is the bar for all Python changes.
+- **Conventions Skills**: `python-conventions` (load for any change under `src/` or `tests/`).
+- **Reviewer Agents**: `code-reviewer` (`.claude/agents/code-reviewer.md`).
 
 ## Conventions
 

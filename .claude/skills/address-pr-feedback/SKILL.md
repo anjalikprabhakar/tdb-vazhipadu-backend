@@ -14,7 +14,7 @@ The brief requires every PR to have at least one line review comment that is **a
 
 - `gh pr view <n> --json headRefName,reviews,comments`
 - Line comments: `gh api repos/{owner}/{repo}/pulls/<n>/comments`
-- If there are **no line comments**, stop and tell the user to run `/review-pr <n> --post` first.
+- If there are **no line comments**, stop and tell the user to run `/review-pr <n>` first.
 - Make sure the PR branch is checked out (`git branch --show-current` vs `headRefName`); if not, ask before switching.
 
 ## 2. Triage
