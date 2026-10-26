@@ -206,3 +206,35 @@ async def test_validation_error_when_daily_limit_invalid(
     error = created.json()["error"]
     assert error["code"] == "validation_error"
     assert [detail["field"] for detail in error["details"]] == ["daily_limit"]
+
+
+async def test_offering_and_temple_writes_succeed_when_orders_placed_simultaneously(
+    file_client: AsyncClient,
+) -> None:
+    temple_id = (await file_client.post("/temples", json={"name": "Guruvayur"})).json()["id"]
+    pooja = (
+        await file_client.post(
+            f"/temples/{temple_id}/offerings",
+            json={"name": "Udayasthamana Pooja", "price": "5000", "daily_limit": 5},
+        )
+    ).json()
+    booking_date = (today_ist() + timedelta(days=7)).isoformat()
+
+    orders = [place(file_client, temple_id, booking_date, (pooja["id"], 1)) for _ in range(20)]
+    creates = [
+        file_client.post(
+            f"/temples/{temple_id}/offerings", json={"name": f"Archana {n}", "price": "50"}
+        )
+        for n in range(10)
+    ]
+    patches = [
+        file_client.patch(f"/offerings/{pooja['id']}", json={"daily_limit": 5}) for _ in range(10)
+    ]
+    temples = [file_client.post("/temples", json={"name": f"Temple {n}"}) for n in range(5)]
+    responses = await asyncio.gather(*orders, *creates, *patches, *temples)
+
+    order_statuses = sorted(resp.status_code for resp in responses[:20])
+    assert order_statuses == [201] * 5 + [409] * 15
+    assert [resp.status_code for resp in responses[20:30]] == [201] * 10
+    assert [resp.status_code for resp in responses[30:40]] == [200] * 10
+    assert [resp.status_code for resp in responses[40:]] == [201] * 5
